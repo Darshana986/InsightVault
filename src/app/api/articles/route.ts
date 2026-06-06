@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { extractArticle } from '@/lib/jina';
-import { analyzeArticle, GeminiError } from '@/lib/gemini';
 
-// POST /api/articles - Save a new article
+// POST /api/articles - Save a new article (instant, processing happens via polling)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -26,42 +24,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Extract article content using Jina Reader
-    let title = 'Untitled';
-    let content = '';
-    let readingTime = null;
-    let extractionError: string | null = null;
-
-    try {
-      console.log('Extracting article from:', url);
-      const extracted = await extractArticle(url);
-      console.log('Extraction result:', { title: extracted.title, contentLength: extracted.content?.length });
-      title = extracted.title || 'Untitled';
-      content = extracted.content || '';
-      readingTime = extracted.readingTime;
-      
-      if (!title || title === 'Untitled') {
-        console.warn('No title extracted from article');
-      }
-    } catch (extractError) {
-      console.error('Article extraction failed:', extractError);
-      title = 'Could not extract title';
-      extractionError = 'Could not extract article content. The site may be blocked or unavailable.';
-    }
-
-    // Step 2: Save to database with extracted content
+    // Just save URL to database - processing happens via GET polling
     const { data: savedArticle, error: saveError } = await supabase
       .from('articles')
       .insert({
         url,
-        title,
-        content,
-        reading_time: readingTime,
+        title: null,  // Will be filled by processing
+        content: null,
+        reading_time: null,
         status: 'unread',
         tldr: null,
         takeaways: null,
         categories: null,
-        ai_error: extractionError, // Set error if extraction failed
+        ai_error: null,
       })
       .select()
       .single();
@@ -74,43 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 3: Try AI analysis (don't block on failure)
-    if (content && content.length > 100) {
-      try {
-        const analysis = await analyzeArticle(title, content);
-        
-        await supabase
-          .from('articles')
-          .update({
-            tldr: analysis.tldr,
-            takeaways: analysis.takeaways,
-            categories: analysis.categories,
-          })
-          .eq('id', savedArticle.id);
-        
-        savedArticle.tldr = analysis.tldr;
-        savedArticle.takeaways = analysis.takeaways;
-        savedArticle.categories = analysis.categories;
-        
-      } catch (aiError) {
-        console.error('AI analysis failed:', aiError);
-        
-        let errorMessage = 'AI analysis failed. Click retry to try again.';
-        if (aiError instanceof GeminiError) {
-          if (aiError.status === 429) {
-            errorMessage = 'Rate limit reached. Please retry in 1 minute.';
-          }
-        }
-        
-        await supabase
-          .from('articles')
-          .update({ ai_error: errorMessage })
-          .eq('id', savedArticle.id);
-        
-        savedArticle.ai_error = errorMessage;
-      }
-    }
-
+    console.log('Article saved instantly:', savedArticle.id);
     return NextResponse.json({ article: savedArticle }, { status: 201 });
   } catch (error) {
     console.error('API error:', error);

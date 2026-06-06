@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { extractArticle } from '@/lib/jina';
 import { analyzeArticle, GeminiError } from '@/lib/gemini';
 
-// GET /api/articles/[id] - Get a single article
+// Track in-progress processing to prevent duplicate work
+const processingArticles = new Set<string>();
+
+// GET /api/articles/[id] - Get a single article (triggers processing if needed)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -21,6 +25,78 @@ export async function GET(
         { error: 'Article not found' },
         { status: 404 }
       );
+    }
+
+    // Check if article needs processing (no title and no error yet)
+    const needsProcessing = !article.title && !article.ai_error;
+    
+    // If needs processing and not already being processed, do it now
+    if (needsProcessing && !processingArticles.has(id)) {
+      processingArticles.add(id);
+      
+      try {
+        console.log('Processing article:', id);
+        
+        // Step 1: Extract with Jina
+        let title = null;
+        let content = null;
+        let readingTime = null;
+        let extractionError: string | null = null;
+        
+        try {
+          const extracted = await extractArticle(article.url);
+          title = extracted.title || 'Untitled';
+          content = extracted.content || '';
+          readingTime = extracted.readingTime;
+          console.log('Extraction done:', { title, contentLength: content?.length });
+        } catch (e) {
+          console.error('Jina extraction failed:', e);
+          title = 'Could not extract title';
+          extractionError = 'Could not extract article. The site may be blocked.';
+        }
+        
+        // Update with extraction results
+        await supabase
+          .from('articles')
+          .update({ title, content, reading_time: readingTime, ai_error: extractionError })
+          .eq('id', id);
+        
+        article.title = title;
+        article.content = content;
+        article.reading_time = readingTime;
+        article.ai_error = extractionError;
+        
+        // Step 2: AI analysis (if we have content)
+        if (content && content.length > 100 && !extractionError) {
+          try {
+            const analysis = await analyzeArticle(title!, content);
+            
+            await supabase
+              .from('articles')
+              .update({
+                tldr: analysis.tldr,
+                takeaways: analysis.takeaways,
+                categories: analysis.categories,
+              })
+              .eq('id', id);
+            
+            article.tldr = analysis.tldr;
+            article.takeaways = analysis.takeaways;
+            article.categories = analysis.categories;
+            console.log('AI analysis done for:', id);
+          } catch (aiError) {
+            console.error('AI analysis failed:', aiError);
+            let errorMessage = 'AI analysis failed. Click retry.';
+            if (aiError instanceof GeminiError && aiError.status === 429) {
+              errorMessage = 'Rate limit. Retry in 1 minute.';
+            }
+            await supabase.from('articles').update({ ai_error: errorMessage }).eq('id', id);
+            article.ai_error = errorMessage;
+          }
+        }
+      } finally {
+        processingArticles.delete(id);
+      }
     }
 
     return NextResponse.json({ article });
