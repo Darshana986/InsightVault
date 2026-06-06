@@ -20,7 +20,7 @@ git status
 - Push to origin
 
 ## 3. Update SESSION-STATE.md
-Read the current state from `/Users/darshana-8393/Documents/Agent workflows/InsightVault/docs/SESSION-STATE.md` and update:
+Read the current state from `docs/SESSION-STATE.md` (in the app folder) and update:
 - **Last Updated** date
 - **Current Phase** and **Status**
 - **Completed Phases** list (add new items if needed)
