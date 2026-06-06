@@ -18,6 +18,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
 
   // Poll for updates when title or tldr is missing
   useEffect(() => {
+    // Don't poll if deleted
+    if (isDeleted) return;
+    
     // Stop polling if we have everything
     const hasTitle = !!localArticle.title;
     const hasTldr = !!localArticle.tldr;
@@ -44,10 +47,12 @@ export function ArticleCard({ article }: ArticleCardProps) {
     }, 2000); // Poll every 2 seconds
     
     return () => clearInterval(pollInterval);
-  }, [localArticle.id]);
+  }, [localArticle.id, localArticle.title, localArticle.tldr, localArticle.ai_error, isDeleted]);
 
-  // Don't render if deleted (MUST be after all hooks)
-  if (isDeleted) return null;
+  // Render nothing if deleted (using fragment to maintain hook consistency)
+  if (isDeleted) {
+    return null;
+  }
 
   // Format the date
   const savedDate = new Date(localArticle.created_at).toLocaleDateString('en-US', {

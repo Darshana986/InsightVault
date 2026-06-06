@@ -15,17 +15,25 @@ export interface ExtractedArticle {
 export async function extractArticle(url: string): Promise<ExtractedArticle> {
   const jinaUrl = `https://r.jina.ai/${url}`;
   
+  console.log('Calling Jina API:', jinaUrl);
+  
   const response = await fetch(jinaUrl, {
     headers: {
       'Accept': 'application/json',
     },
   });
 
+  console.log('Jina response status:', response.status);
+
   if (!response.ok) {
-    throw new Error(`Jina Reader failed: ${response.status}`);
+    const errorText = await response.text();
+    console.error('Jina error response:', errorText);
+    throw new Error(`Jina Reader failed: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
+  console.log('Jina response data keys:', Object.keys(data));
+  console.log('Jina data.data:', data.data ? Object.keys(data.data) : 'no data.data');
   
   // Calculate reading time (average 200 words per minute)
   const wordCount = data.data?.content?.split(/\s+/).length ?? 0;

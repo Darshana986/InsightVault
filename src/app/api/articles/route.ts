@@ -30,15 +30,23 @@ export async function POST(request: NextRequest) {
     let title = 'Untitled';
     let content = '';
     let readingTime = null;
+    let extractionError: string | null = null;
 
     try {
+      console.log('Extracting article from:', url);
       const extracted = await extractArticle(url);
-      title = extracted.title;
-      content = extracted.content;
+      console.log('Extraction result:', { title: extracted.title, contentLength: extracted.content?.length });
+      title = extracted.title || 'Untitled';
+      content = extracted.content || '';
       readingTime = extracted.readingTime;
+      
+      if (!title || title === 'Untitled') {
+        console.warn('No title extracted from article');
+      }
     } catch (extractError) {
       console.error('Article extraction failed:', extractError);
       title = 'Could not extract title';
+      extractionError = 'Could not extract article content. The site may be blocked or unavailable.';
     }
 
     // Step 2: Save to database with extracted content
@@ -53,7 +61,7 @@ export async function POST(request: NextRequest) {
         tldr: null,
         takeaways: null,
         categories: null,
-        ai_error: null,
+        ai_error: extractionError, // Set error if extraction failed
       })
       .select()
       .single();
