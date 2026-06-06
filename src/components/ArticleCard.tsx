@@ -10,10 +10,14 @@ interface ArticleCardProps {
 
 export function ArticleCard({ article }: ArticleCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [localArticle, setLocalArticle] = useState(article);
   const router = useRouter();
+
+  // Don't render if deleted
+  if (isDeleted) return null;
 
   // Poll for updates when title or tldr is missing
   useEffect(() => {
@@ -66,7 +70,8 @@ export function ArticleCard({ article }: ArticleCardProps) {
       });
 
       if (response.ok) {
-        router.refresh(); // Refresh the page to remove deleted article
+        setIsDeleted(true); // Hide immediately
+        router.refresh(); // Also refresh for consistency
       } else {
         console.error('Failed to delete article');
         setIsDeleting(false);
