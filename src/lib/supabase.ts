@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Create Supabase client
+// Note: For full type safety, generate types with `supabase gen types typescript`
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
