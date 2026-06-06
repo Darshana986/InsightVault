@@ -37,7 +37,7 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
   // Truncate content if too long (Gemini has token limits)
   const truncatedContent = content.slice(0, 15000);
 
-  const prompt = `Analyze this article and provide a structured response.
+  const prompt = `You're summarizing this article for someone who saves articles but never reads them. Give them the gist so they don't have to.
 
 ARTICLE TITLE: ${title}
 
@@ -48,20 +48,24 @@ ${truncatedContent}
 
 Respond in this EXACT JSON format (no markdown, no code blocks, just pure JSON):
 {
-  "tldr": "A 2-3 sentence summary of the main point. Be concise and direct. No fluff.",
-  "takeaways": [
-    "First key insight or actionable point",
-    "Second key insight or actionable point", 
-    "Third key insight or actionable point"
-  ],
+  "tldr": "The full gist goes here - see rules below",
+  "takeaways": [],
   "categories": ["Category1", "Category2"]
 }
 
-RULES:
-- TLDR: 2-3 sentences max, capture the essence
-- Takeaways: Exactly 3 points, each one line, actionable or insightful
-- Categories: Pick 1-3 from: AI, Product, Engineering, Business, Startups, Leadership, Marketing, Design, Career, Technology, Science, Culture, Other
-- No marketing speak, no fluff, be direct
+RULES FOR THE GIST:
+- Write 4-8 short paragraphs, each 1-2 sentences
+- Start with the main point in bold (use **text** for bold)
+- Be conversational, like you're telling a friend
+- Include the key facts, numbers, and context that matter
+- No fluff, no jargon, no "this article discusses" or "the author argues"
+- If there's interesting fine print or implications, include them
+- End with any surprising or notable details
+- Use line breaks between paragraphs (use \\n\\n)
+
+RULES FOR CATEGORIES:
+- Pick 1-3 from: AI, Product, Engineering, Business, Startups, Leadership, Marketing, Design, Career, Technology, Science, Culture, Other
+- Leave takeaways as empty array []
 - Return ONLY valid JSON, nothing else`;
 
   try {

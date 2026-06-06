@@ -110,11 +110,8 @@ export function ArticleCard({ article }: ArticleCardProps) {
     }
   };
 
-  // Check if TLDR needs truncation (more than ~150 chars)
-  const tldrNeedsTruncation = localArticle.tldr && localArticle.tldr.length > 150;
-  const displayTldr = expanded || !tldrNeedsTruncation 
-    ? localArticle.tldr 
-    : localArticle.tldr?.slice(0, 150);
+  // Check if gist needs truncation (more than ~300 chars for the longer format)
+  const tldrNeedsTruncation = localArticle.tldr && localArticle.tldr.length > 300;
 
   return (
     <div className={`p-4 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 
@@ -181,13 +178,19 @@ export function ArticleCard({ article }: ArticleCardProps) {
         </div>
       )}
 
-      {/* TLDR with Expand */}
+      {/* Gist */}
       {localArticle.tldr && !localArticle.ai_error && (
         <div className="mt-3">
-          <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">TL;DR</h4>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            {displayTldr}
-          </p>
+          <div 
+            className="text-sm text-zinc-700 dark:text-zinc-300 space-y-2 [&_strong]:font-semibold [&_strong]:text-zinc-900 [&_strong]:dark:text-zinc-100 [&_p]:leading-relaxed"
+            dangerouslySetInnerHTML={{ 
+              __html: (expanded || !tldrNeedsTruncation ? localArticle.tldr : localArticle.tldr?.slice(0, 300) + '...')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>')
+            }}
+          />
           {tldrNeedsTruncation && (
             <button 
               onClick={() => setExpanded(!expanded)}
@@ -199,20 +202,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
         </div>
       )}
 
-      {/* Key Takeaways */}
-      {localArticle.takeaways && localArticle.takeaways.length > 0 && (
-        <div className="mt-4">
-          <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Key Takeaways</h4>
-          <ul className="space-y-2">
-            {localArticle.takeaways.slice(0, 3).map((takeaway, index) => (
-              <li key={index} className="text-sm text-zinc-700 dark:text-zinc-300 flex items-start gap-2">
-                <span className="text-blue-500 mt-0.5 flex-shrink-0">•</span>
-                <span>{takeaway}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Takeaways removed - gist replaces this */}
 
       {/* Categories */}
       {localArticle.categories && localArticle.categories.length > 0 && (
