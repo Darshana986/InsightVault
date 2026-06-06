@@ -7,9 +7,9 @@
 
 ## Current State
 
-**Last Updated**: 2026-06-06
-**Current Phase**: 5 Complete, UX Improvements Done
-**Status**: Full MVP working - instant save, background AI, retry, expandable content
+**Last Updated**: 2026-06-06 (evening)
+**Current Phase**: 5 Complete, Production Deployed
+**Status**: Full MVP live at insight-vault-rouge.vercel.app
 
 ---
 
@@ -22,26 +22,31 @@
 - ✅ **Phase 4**: Article Extraction - Jina Reader integrated, titles + reading time extracted
 - ✅ **Phase 5**: AI Processing - Gemini 2.5 Flash integrated, TLDR/takeaways/categories
 - ✅ **UX Improvements**:
-  - Instant save (just URL, background processing)
+  - **Instant save** (<200ms) - URL saved immediately, processing via polling
   - Shimmering placeholders while loading
-  - Auto-polling for background updates
+  - Auto-polling triggers Jina + AI on first poll
   - Error handling with retry button
   - Expandable TLDR (More/Less)
   - Full takeaways (no truncation)
   - Section labels (TL;DR, Key Takeaways)
+- ✅ **Production**: Live on Vercel (auto-deploys from GitHub)
 
 ---
 
 ## Immediate Next Steps (Suggested)
 
-### Phase 6: Polish & Deploy
+### Phase 6: Polish & Features
 
-**Potential improvements**:
+**High Priority**:
+1. Fix React useEffect dependency warning (hot-reload artifact)
+2. Stop polling for deleted articles (404 handling)
+
+**Nice to Have**:
 1. Dark mode toggle
 2. Search/filter articles
 3. Mark as read/starred
 4. User authentication (Supabase Auth)
-5. Deploy to production (Vercel)
+5. Mobile responsive improvements
 
 ---
 
