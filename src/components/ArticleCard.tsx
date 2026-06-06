@@ -16,9 +16,6 @@ export function ArticleCard({ article }: ArticleCardProps) {
   const [localArticle, setLocalArticle] = useState(article);
   const router = useRouter();
 
-  // Don't render if deleted
-  if (isDeleted) return null;
-
   // Poll for updates when title or tldr is missing
   useEffect(() => {
     // Stop polling if we have everything
@@ -48,6 +45,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
     
     return () => clearInterval(pollInterval);
   }, [localArticle.id]);
+
+  // Don't render if deleted (MUST be after all hooks)
+  if (isDeleted) return null;
 
   // Format the date
   const savedDate = new Date(localArticle.created_at).toLocaleDateString('en-US', {
