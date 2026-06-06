@@ -33,20 +33,22 @@
 
 ---
 
-## Immediate Next Steps (Suggested)
+## TODO (On Request)
 
-### Phase 6: Polish & Features
+When user resumes and asks for these, implement them:
 
-**High Priority**:
-1. Fix React useEffect dependency warning (hot-reload artifact)
-2. Stop polling for deleted articles (404 handling)
+### UX/UI Improvements
+- [ ] **Restructure TLDR & Key Takeaways** - Better visual layout/formatting
+- [ ] **Unread state management** - Make it more intuitive (visual cues, click to mark read)
 
-**Nice to Have**:
-1. Dark mode toggle
-2. Search/filter articles
-3. Mark as read/starred
-4. User authentication (Supabase Auth)
-5. Mobile responsive improvements
+### Performance
+- [ ] **Delete is slow** - Investigate why delete takes time, optimize
+- [ ] **Fix useEffect dependency warning** - Change from multiple deps to single stable dep (`[localArticle.id]` only, check values inside effect)
+
+### Features
+- [ ] **Search provision** - Search articles by title/content/tags
+- [ ] **Filter provision** - Filter by status (unread/read/starred), categories, date
+- [ ] **Paywall/signin handling** - For Medium/Substack, leverage user's existing session if logged in (may need browser extension or different approach)
 
 ---
 
