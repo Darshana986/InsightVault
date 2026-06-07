@@ -2,6 +2,9 @@ import { supabase } from '@/lib/supabase';
 import { SaveArticleForm } from '@/components/SaveArticleForm';
 import { ArticleList } from '@/components/ArticleList';
 
+// Force dynamic rendering - always fetch fresh data
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   // Fetch articles from database (Server Component - runs on server)
   const { data: articles, error } = await supabase
