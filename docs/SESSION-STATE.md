@@ -7,8 +7,8 @@
 
 ## Current State
 
-**Last Updated**: 2026-06-06 (evening)
-**Current Phase**: 5 Complete, Production Deployed
+**Last Updated**: 2026-06-07
+**Current Phase**: 5 Complete + UX Redesign
 **Status**: Full MVP live at insight-vault-rouge.vercel.app
 
 ---
@@ -20,15 +20,22 @@
 - ✅ **Phase 2**: Database - Supabase project, articles table, RLS policies
 - ✅ **Phase 3**: Core API - POST/GET/DELETE endpoints, basic CRUD working
 - ✅ **Phase 4**: Article Extraction - Jina Reader integrated, titles + reading time extracted
-- ✅ **Phase 5**: AI Processing - Gemini 2.5 Flash integrated, TLDR/takeaways/categories
+- ✅ **Phase 5**: AI Processing - Gemini integrated, TLDR/takeaways/categories
 - ✅ **UX Improvements**:
   - **Instant save** (<200ms) - URL saved immediately, processing via polling
   - Shimmering placeholders while loading
   - Auto-polling triggers Jina + AI on first poll
   - Error handling with retry button
-  - Expandable TLDR (More/Less)
-  - Full takeaways (no truncation)
-  - Section labels (TL;DR, Key Takeaways)
+  - Expandable content (More/Less)
+- ✅ **UX Redesign** (2026-06-07):
+  - **Replaced TLDR + Takeaways with single "Gist"** - Conversational, no fluff format
+  - Gist supports bold (**text**) and paragraphs
+  - No more separate sections - just one comprehensive summary
+- ✅ **AI Reliability** (2026-06-07):
+  - **Added Groq as fallback** when Gemini is rate limited (Llama 3.1 8B)
+  - Automatic fallback on 429, 503, or 404 errors
+  - Fixed JSON parsing issues in both providers
+  - Fixed Vercel caching with `force-dynamic`
 - ✅ **Production**: Live on Vercel (auto-deploys from GitHub)
 
 ---
@@ -38,7 +45,7 @@
 When user resumes and asks for these, implement them:
 
 ### UX/UI Improvements
-- [ ] **Restructure TLDR & Key Takeaways** - Better visual layout/formatting
+- [x] **Restructure TLDR & Key Takeaways** - ✅ Done! Replaced with single conversational "gist"
 - [ ] **Unread state management** - Make it more intuitive (visual cues, click to mark read)
 
 ### Performance
@@ -49,6 +56,9 @@ When user resumes and asks for these, implement them:
 - [ ] **Search provision** - Search articles by title/content/tags
 - [ ] **Filter provision** - Filter by status (unread/read/starred), categories, date
 - [ ] **Paywall/signin handling** - For Medium/Substack, leverage user's existing session if logged in (may need browser extension or different approach)
+
+### Production Checklist
+- [x] Add `GROQ_API_KEY` to Vercel environment variables
 
 ---
 
@@ -87,7 +97,8 @@ InsightVault/
     │       ├── supabase.ts        # Database client
     │       ├── database.types.ts  # TypeScript types (includes ai_error)
     │       ├── jina.ts            # Article extraction
-    │       └── gemini.ts          # AI analysis (GeminiError class)
+    │       ├── gemini.ts          # AI analysis (primary)
+    │       └── groq.ts            # AI analysis (fallback - Llama 3.1 8B)
     │
     ├── .env.local                 # 🔐 Secrets (gitignored)
     └── package.json               # Dependencies
