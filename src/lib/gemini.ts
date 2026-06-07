@@ -22,9 +22,13 @@ export class GeminiError extends Error {
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+// Helper to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
  * Analyze article content using Gemini AI
  * Generates: TLDR, 3 key takeaways, and categories
+ * Includes retry logic for rate limits
  */
 export async function analyzeArticle(title: string, content: string): Promise<ArticleAnalysis> {
   if (!GEMINI_API_KEY) {
@@ -32,8 +36,8 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
   }
 
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  // Using gemini-2.0-flash for better availability (2.5-flash often hits capacity limits)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  // Using gemini-1.5-flash for better rate limits (15 RPM vs 10 RPM)
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   // Truncate content if too long (Gemini has token limits)
   const truncatedContent = content.slice(0, 15000);
@@ -70,28 +74,48 @@ RULES FOR CATEGORIES:
 - Return ONLY valid JSON, nothing else`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const textResponse = response.text();
+    // Retry logic for rate limits
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          // Wait before retry: 2s, 4s
+          await delay(2000 * attempt);
+          console.log(`Gemini retry attempt ${attempt + 1}`);
+        }
+        
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const textResponse = response.text();
 
-    if (!textResponse) {
-      throw new Error('No response from Gemini');
+        if (!textResponse) {
+          throw new Error('No response from Gemini');
+        }
+
+        // Parse the JSON response
+        // Clean up the response (remove any markdown code blocks if present)
+        const cleanJson = textResponse
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim();
+        
+        const analysis = JSON.parse(cleanJson);
+        
+        return {
+          tldr: analysis.tldr || 'No summary available',
+          takeaways: Array.isArray(analysis.takeaways) ? analysis.takeaways.slice(0, 3) : [],
+          categories: Array.isArray(analysis.categories) ? analysis.categories : [],
+        };
+      } catch (err: unknown) {
+        lastError = err;
+        const errMsg = (err as { message?: string }).message || '';
+        // Only retry on rate limit or service unavailable
+        if (!errMsg.includes('429') && !errMsg.includes('503') && !errMsg.includes('Too Many') && !errMsg.includes('high demand')) {
+          throw err; // Don't retry other errors
+        }
+      }
     }
-
-    // Parse the JSON response
-    // Clean up the response (remove any markdown code blocks if present)
-    const cleanJson = textResponse
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .trim();
-    
-    const analysis = JSON.parse(cleanJson);
-    
-    return {
-      tldr: analysis.tldr || 'No summary available',
-      takeaways: Array.isArray(analysis.takeaways) ? analysis.takeaways.slice(0, 3) : [],
-      categories: Array.isArray(analysis.categories) ? analysis.categories : [],
-    };
+    throw lastError; // All retries failed
   } catch (error: unknown) {
     console.error('Gemini analysis error:', error);
     
