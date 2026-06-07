@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { extractArticle } from '@/lib/jina';
 import { analyzeArticle, GeminiError } from '@/lib/gemini';
+import { analyzeWithGroq } from '@/lib/groq';
 
 // Track in-progress processing to prevent duplicate work
 const processingArticles = new Set<string>();
@@ -69,7 +70,18 @@ export async function GET(
         // Step 2: AI analysis (if we have content)
         if (content && content.length > 100 && !extractionError) {
           try {
-            const analysis = await analyzeArticle(title!, content);
+            // Try Gemini first, fall back to Groq if rate limited
+            let analysis;
+            try {
+              analysis = await analyzeArticle(title!, content);
+            } catch (geminiErr) {
+              if (geminiErr instanceof GeminiError && (geminiErr.status === 429 || geminiErr.status === 503)) {
+                console.log('Gemini rate limited, trying Groq...');
+                analysis = await analyzeWithGroq(title!, content);
+              } else {
+                throw geminiErr;
+              }
+            }
             
             await supabase
               .from('articles')
@@ -184,7 +196,18 @@ export async function PATCH(
     }
 
     try {
-      const analysis = await analyzeArticle(article.title || 'Untitled', article.content);
+      // Try Gemini first, fall back to Groq if rate limited
+      let analysis;
+      try {
+        analysis = await analyzeArticle(article.title || 'Untitled', article.content);
+      } catch (geminiErr) {
+        if (geminiErr instanceof GeminiError && (geminiErr.status === 429 || geminiErr.status === 503)) {
+          console.log('Gemini rate limited on retry, trying Groq...');
+          analysis = await analyzeWithGroq(article.title || 'Untitled', article.content);
+        } else {
+          throw geminiErr;
+        }
+      }
       
       // Update article with AI results
       const { data: updated, error: updateError } = await supabase
