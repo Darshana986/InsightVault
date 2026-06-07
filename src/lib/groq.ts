@@ -57,6 +57,7 @@ RULES FOR CATEGORIES:
       model: 'llama-3.1-8b-instant',
       temperature: 0.3,
       max_tokens: 2000,
+      response_format: { type: 'json_object' }, // Force JSON output
     });
 
     const textResponse = completion.choices[0]?.message?.content;
@@ -65,21 +66,21 @@ RULES FOR CATEGORIES:
       throw new Error('No response from Groq');
     }
 
-    // Clean up the response
+    console.log('Groq raw response (first 500 chars):', textResponse.slice(0, 500));
+
+    // Clean up the response - remove markdown code blocks if present
     let cleanJson = textResponse
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '')
       .trim();
 
-    // Fix control characters
-    cleanJson = cleanJson
-      .replace(/[\x00-\x1F\x7F]/g, (char) => {
-        if (char === '\n') return '\\n';
-        if (char === '\r') return '\\r';
-        if (char === '\t') return '\\t';
-        return '';
-      });
+    // Try to extract JSON object if wrapped in other text
+    const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleanJson = jsonMatch[0];
+    }
 
+    // Parse directly - JSON.parse handles newlines in valid JSON
     const analysis = JSON.parse(cleanJson);
 
     return {

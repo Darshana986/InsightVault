@@ -70,13 +70,13 @@ export async function GET(
         // Step 2: AI analysis (if we have content)
         if (content && content.length > 100 && !extractionError) {
           try {
-            // Try Gemini first, fall back to Groq if rate limited
+            // Try Gemini first, fall back to Groq if unavailable
             let analysis;
             try {
               analysis = await analyzeArticle(title!, content);
             } catch (geminiErr) {
-              if (geminiErr instanceof GeminiError && (geminiErr.status === 429 || geminiErr.status === 503)) {
-                console.log('Gemini rate limited, trying Groq...');
+              if (geminiErr instanceof GeminiError && (geminiErr.status === 429 || geminiErr.status === 503 || geminiErr.status === 404)) {
+                console.log('Gemini unavailable, trying Groq...');
                 analysis = await analyzeWithGroq(title!, content);
               } else {
                 throw geminiErr;
@@ -196,13 +196,13 @@ export async function PATCH(
     }
 
     try {
-      // Try Gemini first, fall back to Groq if rate limited
+      // Try Gemini first, fall back to Groq if unavailable
       let analysis;
       try {
         analysis = await analyzeArticle(article.title || 'Untitled', article.content);
       } catch (geminiErr) {
-        if (geminiErr instanceof GeminiError && (geminiErr.status === 429 || geminiErr.status === 503)) {
-          console.log('Gemini rate limited on retry, trying Groq...');
+        if (geminiErr instanceof GeminiError && (geminiErr.status === 429 || geminiErr.status === 503 || geminiErr.status === 404)) {
+          console.log('Gemini unavailable on retry, trying Groq...');
           analysis = await analyzeWithGroq(article.title || 'Untitled', article.content);
         } else {
           throw geminiErr;

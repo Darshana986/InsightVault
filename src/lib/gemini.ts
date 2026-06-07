@@ -36,8 +36,8 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
   }
 
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  // Using gemini-1.5-flash for better rate limits (15 RPM vs 10 RPM)
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  // Using gemini-2.0-flash which has good availability
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   // Truncate content if too long (Gemini has token limits)
   const truncatedContent = content.slice(0, 15000);
