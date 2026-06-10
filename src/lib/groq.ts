@@ -17,8 +17,8 @@ export async function analyzeWithGroq(title: string, content: string): Promise<A
 
   const groq = new Groq({ apiKey: GROQ_API_KEY });
 
-  // Truncate content if too long
-  const truncatedContent = content.slice(0, 12000);
+  // Keep payload compact for Groq free-tier token limits.
+  const truncatedContent = content.slice(0, 7000);
 
   const prompt = `You're summarizing this article for someone who saves articles but never reads them. Give them the gist so they don't have to.
 
