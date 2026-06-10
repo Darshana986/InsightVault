@@ -16,17 +16,17 @@ export function ArticleCard({ article }: ArticleCardProps) {
   const [localArticle, setLocalArticle] = useState(article);
   const router = useRouter();
 
-  // Poll for updates when title or tldr is missing
+  // Poll for updates when title or analysis is missing
   useEffect(() => {
     // Don't poll if deleted
     if (isDeleted) return;
     
     // Stop polling if we have everything
     const hasTitle = !!localArticle.title;
-    const hasTldr = !!localArticle.tldr;
+    const hasAnalysis = !!localArticle.analysis;
     const hasError = !!localArticle.ai_error;
     
-    if (hasTitle && (hasTldr || hasError)) return;
+    if (hasTitle && (hasAnalysis || hasError)) return;
     
     const pollInterval = setInterval(async () => {
       try {
@@ -35,8 +35,8 @@ export function ArticleCard({ article }: ArticleCardProps) {
           const data = await res.json();
           if (data.article) {
             setLocalArticle(data.article);
-            // Stop if we have title AND (tldr OR error)
-            if (data.article.title && (data.article.tldr || data.article.ai_error)) {
+            // Stop if we have title AND (analysis OR error)
+            if (data.article.title && (data.article.analysis || data.article.ai_error)) {
               clearInterval(pollInterval);
             }
           }
@@ -47,7 +47,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
     }, 2000); // Poll every 2 seconds
     
     return () => clearInterval(pollInterval);
-  }, [localArticle.id, localArticle.title, localArticle.tldr, localArticle.ai_error, isDeleted]);
+  }, [localArticle.id, localArticle.title, localArticle.analysis, localArticle.ai_error, isDeleted]);
 
   // Render nothing if deleted (using fragment to maintain hook consistency)
   if (isDeleted) {
@@ -110,8 +110,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
     }
   };
 
-  // Check if gist needs truncation (more than ~300 chars for the longer format)
-  const tldrNeedsTruncation = localArticle.tldr && localArticle.tldr.length > 300;
+  const analysisText = localArticle.analysis;
+  // Keep most of the analysis visible by default; collapse only very long outputs.
+  const analysisNeedsTruncation = analysisText && analysisText.length > 1200;
 
   return (
     <div className={`p-4 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 
@@ -170,7 +171,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
       )}
 
       {/* Shimmering Placeholder when AI is processing */}
-      {!localArticle.tldr && !localArticle.ai_error && (
+      {!analysisText && !localArticle.ai_error && (
         <div className="mt-2 space-y-2 animate-pulse">
           <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded w-full"></div>
           <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded w-4/5"></div>
@@ -179,19 +180,19 @@ export function ArticleCard({ article }: ArticleCardProps) {
       )}
 
       {/* Gist */}
-      {localArticle.tldr && !localArticle.ai_error && (
+      {analysisText && !localArticle.ai_error && (
         <div className="mt-3">
           <div 
             className="text-sm text-zinc-700 dark:text-zinc-300 space-y-2 [&_strong]:font-semibold [&_strong]:text-zinc-900 [&_strong]:dark:text-zinc-100 [&_p]:leading-relaxed"
             dangerouslySetInnerHTML={{ 
-              __html: (expanded || !tldrNeedsTruncation ? localArticle.tldr : localArticle.tldr?.slice(0, 300) + '...')
+              __html: (expanded || !analysisNeedsTruncation ? analysisText : analysisText?.slice(0, 1200) + '...')
                 .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\n\n/g, '</p><p>')
                 .replace(/^/, '<p>')
                 .replace(/$/, '</p>')
             }}
           />
-          {tldrNeedsTruncation && (
+          {analysisNeedsTruncation && (
             <button 
               onClick={() => setExpanded(!expanded)}
               className="text-xs text-blue-500 hover:text-blue-600 mt-1 font-medium"

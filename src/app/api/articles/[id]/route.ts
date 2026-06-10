@@ -86,14 +86,12 @@ export async function GET(
             await supabase
               .from('articles')
               .update({
-                tldr: analysis.tldr,
-                takeaways: analysis.takeaways,
+                analysis: analysis.analysis,
                 categories: analysis.categories,
               })
               .eq('id', id);
             
-            article.tldr = analysis.tldr;
-            article.takeaways = analysis.takeaways;
+            article.analysis = analysis.analysis;
             article.categories = analysis.categories;
             console.log('AI analysis done for:', id);
           } catch (aiError) {
@@ -213,8 +211,7 @@ export async function PATCH(
       const { data: updated, error: updateError } = await supabase
         .from('articles')
         .update({
-          tldr: analysis.tldr,
-          takeaways: analysis.takeaways,
+          analysis: analysis.analysis,
           categories: analysis.categories,
           ai_error: null,
         })

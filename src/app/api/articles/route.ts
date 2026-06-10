@@ -33,8 +33,7 @@ export async function POST(request: NextRequest) {
         content: null,
         reading_time: null,
         status: 'unread',
-        tldr: null,
-        takeaways: null,
+        analysis: null,
         categories: null,
         ai_error: null,
       })

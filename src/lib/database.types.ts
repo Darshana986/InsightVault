@@ -8,8 +8,7 @@ export interface Article {
   url: string;
   title: string | null;
   content: string | null;
-  tldr: string | null;
-  takeaways: string[] | null;
+  analysis: string | null;
   categories: string[] | null;
   reading_time: number | null;
   status: ArticleStatus;

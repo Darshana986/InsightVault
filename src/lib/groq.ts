@@ -31,13 +31,13 @@ ${truncatedContent}
 
 Respond in this EXACT JSON format (no markdown, no code blocks, just pure JSON):
 {
-  "tldr": "The full gist goes here - see rules below",
-  "takeaways": [],
+  "analysis": "The full gist goes here - see rules below",
   "categories": ["Category1", "Category2"]
 }
 
 RULES FOR THE GIST:
-- Write 4-8 short paragraphs, each 1-2 sentences
+- Write 10-15 lines total based on article size
+- Keep paragraphs short (1-2 sentences) with blank lines between paragraphs
 - Start with the main point in bold (use **text** for bold)
 - Be conversational, like you're telling a friend
 - Include the key facts, numbers, and context that matter
@@ -48,7 +48,6 @@ RULES FOR THE GIST:
 
 RULES FOR CATEGORIES:
 - Pick 1-3 from: AI, Product, Engineering, Business, Startups, Leadership, Marketing, Design, Career, Technology, Science, Culture, Other
-- Leave takeaways as empty array []
 - Return ONLY valid JSON, nothing else`;
 
   try {
@@ -84,8 +83,7 @@ RULES FOR CATEGORIES:
     const analysis = JSON.parse(cleanJson);
 
     return {
-      tldr: analysis.tldr || 'No summary available',
-      takeaways: Array.isArray(analysis.takeaways) ? analysis.takeaways.slice(0, 3) : [],
+      analysis: analysis.analysis || analysis.tldr || 'No summary available',
       categories: Array.isArray(analysis.categories) ? analysis.categories : [],
     };
   } catch (error: unknown) {
