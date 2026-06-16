@@ -2,9 +2,11 @@
 // Using official @google/generative-ai SDK
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { buildInsightPrompt } from './insightPrompt';
 
 export interface ArticleAnalysis {
-  analysis: string;
+  coreInsight: string;
+  evidence: string;
   categories: string[];
 }
 
@@ -21,6 +23,16 @@ export class GeminiError extends Error {
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+if (!GEMINI_API_KEY) {
+  throw new Error('GEMINI_API_KEY is not set');
+}
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+const model = genAI.getGenerativeModel({
+  model: 'gemini-2.0-flash'
+});
+
 // Helper to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -30,46 +42,9 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * Includes retry logic for rate limits
  */
 export async function analyzeArticle(title: string, content: string): Promise<ArticleAnalysis> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not set');
-  }
-
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  // Using gemini-2.0-flash which has good availability
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
   // Truncate content if too long (Gemini has token limits)
   const truncatedContent = content.slice(0, 15000);
-
-  const prompt = `You're summarizing this article for someone who saves articles but never reads them. Give them the gist so they don't have to.
-
-ARTICLE TITLE: ${title}
-
-ARTICLE CONTENT:
-${truncatedContent}
-
----
-
-Respond in this EXACT JSON format (no markdown, no code blocks, just pure JSON):
-{
-  "analysis": "The full gist goes here - see rules below",
-  "categories": ["Category1", "Category2"]
-}
-
-RULES FOR THE GIST:
-- Write 10-15 lines total based on article size
-- Keep paragraphs short (1-2 sentences) with blank lines between paragraphs
-- Start with the main point in bold (use **text** for bold)
-- Be conversational, like you're telling a friend
-- Include the key facts, numbers, and context that matter
-- No fluff, no jargon, no "this article discusses" or "the author argues"
-- If there's interesting fine print or implications, include them
-- End with any surprising or notable details
-- Use line breaks between paragraphs (use \\n\\n)
-
-RULES FOR CATEGORIES:
-- Pick 1-3 from: AI, Product, Engineering, Business, Startups, Leadership, Marketing, Design, Career, Technology, Science, Culture, Other
-- Return ONLY valid JSON, nothing else`;
+  const prompt = buildInsightPrompt(title, truncatedContent);
 
   try {
     // Retry logic for rate limits
@@ -107,11 +82,35 @@ RULES FOR CATEGORIES:
             return ''; // Remove other control characters
           });
         
-        const analysis = JSON.parse(cleanJson);
-        
+        const analysis = JSON.parse(cleanJson) as {
+          coreInsight?: unknown;
+          evidence?: unknown;
+          categories?: unknown;
+        };
+
+        if (typeof analysis.coreInsight !== 'string' || !analysis.coreInsight.trim()) {
+          throw new Error('Invalid AI response: coreInsight is required');
+        }
+        if (typeof analysis.evidence !== 'string' || !analysis.evidence.trim()) {
+          throw new Error('Invalid AI response: evidence is required');
+        }
+        if (!Array.isArray(analysis.categories) || analysis.categories.length === 0) {
+          throw new Error('Invalid AI response: categories must be a non-empty array');
+        }
+
+        const categories = analysis.categories
+          .filter((category): category is string => typeof category === 'string')
+          .map((category) => category.trim())
+          .filter(Boolean);
+
+        if (categories.length === 0) {
+          throw new Error('Invalid AI response: categories must contain strings');
+        }
+
         return {
-          analysis: analysis.analysis || analysis.tldr || 'No summary available',
-          categories: Array.isArray(analysis.categories) ? analysis.categories : [],
+          coreInsight: analysis.coreInsight.trim(),
+          evidence: analysis.evidence.trim(),
+          categories,
         };
       } catch (err: unknown) {
         lastError = err;

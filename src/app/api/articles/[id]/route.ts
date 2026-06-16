@@ -4,8 +4,15 @@ import { extractArticle } from '@/lib/jina';
 import { analyzeArticle, GeminiError } from '@/lib/gemini';
 import { analyzeWithGroq } from '@/lib/groq';
 
-// Track in-progress processing to prevent duplicate work
-const processingArticles = new Set<string>();
+// Lock expiration time: 5 minutes
+const LOCK_EXPIRY_MINUTES = 5;
+
+function toStoredAnalysis(coreInsight: string, evidence: string): string {
+  if (!evidence) {
+    return coreInsight;
+  }
+  return `${coreInsight}\n\nEvidence: ${evidence}`;
+}
 
 // GET /api/articles/[id] - Get a single article (triggers processing if needed)
 export async function GET(
@@ -31,10 +38,26 @@ export async function GET(
     // Check if article needs processing (no title and no error yet)
     const needsProcessing = !article.title && !article.ai_error;
     
-    // If needs processing and not already being processed, do it now
-    if (needsProcessing && !processingArticles.has(id)) {
-      processingArticles.add(id);
+    // If needs processing, try to claim the atomic lock
+    if (needsProcessing) {
+      const expiryTime = new Date(Date.now() - LOCK_EXPIRY_MINUTES * 60 * 1000).toISOString();
       
+      // Atomically try to claim the lock: only update if lock is free or expired
+      const { data: lockClaimed } = await supabase
+        .from('articles')
+        .update({ processing_started_at: new Date().toISOString() })
+        .eq('id', id)
+        .or(`processing_started_at.is.null,processing_started_at.lt.${expiryTime}`)
+        .select()
+        .single();
+      
+      // If lockClaimed is null, another instance owns the lock; return current article state
+      if (!lockClaimed) {
+        console.log('Processing lock already claimed for article:', id);
+        return NextResponse.json({ article });
+      }
+      
+      // We own the lock; proceed with extraction and AI analysis
       try {
         console.log('Processing article:', id);
         
@@ -86,12 +109,12 @@ export async function GET(
             await supabase
               .from('articles')
               .update({
-                analysis: analysis.analysis,
+                analysis: toStoredAnalysis(analysis.coreInsight, analysis.evidence),
                 categories: analysis.categories,
               })
               .eq('id', id);
             
-            article.analysis = analysis.analysis;
+            article.analysis = toStoredAnalysis(analysis.coreInsight, analysis.evidence);
             article.categories = analysis.categories;
             console.log('AI analysis done for:', id);
           } catch (aiError) {
@@ -105,7 +128,11 @@ export async function GET(
           }
         }
       } finally {
-        processingArticles.delete(id);
+        // Release the lock by clearing the timestamp
+        await supabase
+          .from('articles')
+          .update({ processing_started_at: null })
+          .eq('id', id);
       }
     }
 
@@ -211,7 +238,7 @@ export async function PATCH(
       const { data: updated, error: updateError } = await supabase
         .from('articles')
         .update({
-          analysis: analysis.analysis,
+          analysis: toStoredAnalysis(analysis.coreInsight, analysis.evidence),
           categories: analysis.categories,
           ai_error: null,
         })

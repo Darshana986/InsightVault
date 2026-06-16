@@ -14,6 +14,7 @@ export interface Article {
   status: ArticleStatus;
   user_notes: string | null;
   ai_error: string | null;
+  processing_started_at: string | null;
   created_at: string;
   updated_at: string;
 }

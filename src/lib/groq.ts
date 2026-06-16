@@ -3,6 +3,7 @@
 
 import Groq from 'groq-sdk';
 import { ArticleAnalysis } from './gemini';
+import { buildInsightPrompt } from './insightPrompt';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
@@ -18,44 +19,16 @@ export async function analyzeWithGroq(title: string, content: string): Promise<A
   const groq = new Groq({ apiKey: GROQ_API_KEY });
 
   // Keep payload compact for Groq free-tier token limits.
-  const truncatedContent = content.slice(0, 7000);
-
-  const prompt = `You're summarizing this article for someone who saves articles but never reads them. Give them the gist so they don't have to.
-
-ARTICLE TITLE: ${title}
-
-ARTICLE CONTENT:
-${truncatedContent}
-
----
-
-Respond in this EXACT JSON format (no markdown, no code blocks, just pure JSON):
-{
-  "analysis": "The full gist goes here - see rules below",
-  "categories": ["Category1", "Category2"]
-}
-
-RULES FOR THE GIST:
-- Write 10-15 lines total based on article size
-- Keep paragraphs short (1-2 sentences) with blank lines between paragraphs
-- Start with the main point in bold (use **text** for bold)
-- Be conversational, like you're telling a friend
-- Include the key facts, numbers, and context that matter
-- No fluff, no jargon, no "this article discusses" or "the author argues"
-- If there's interesting fine print or implications, include them
-- End with any surprising or notable details
-- Use line breaks between paragraphs (use \\n\\n)
-
-RULES FOR CATEGORIES:
-- Pick 1-3 from: AI, Product, Engineering, Business, Startups, Leadership, Marketing, Design, Career, Technology, Science, Culture, Other
-- Return ONLY valid JSON, nothing else`;
+  // The new prompt template is longer, so we reduce content budget further.
+  const truncatedContent = content.slice(0, 3000);
+  const prompt = buildInsightPrompt(title, truncatedContent);
 
   try {
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.1-8b-instant',
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: 512, // JSON output is tiny; prevents hitting token budget mid-generation
       response_format: { type: 'json_object' }, // Force JSON output
     });
 
@@ -80,11 +53,35 @@ RULES FOR CATEGORIES:
     }
 
     // Parse directly - JSON.parse handles newlines in valid JSON
-    const analysis = JSON.parse(cleanJson);
+    const analysis = JSON.parse(cleanJson) as {
+      coreInsight?: unknown;
+      evidence?: unknown;
+      categories?: unknown;
+    };
+
+    if (typeof analysis.coreInsight !== 'string' || !analysis.coreInsight.trim()) {
+      throw new Error('Invalid AI response: coreInsight is required');
+    }
+    if (typeof analysis.evidence !== 'string' || !analysis.evidence.trim()) {
+      throw new Error('Invalid AI response: evidence is required');
+    }
+    if (!Array.isArray(analysis.categories) || analysis.categories.length === 0) {
+      throw new Error('Invalid AI response: categories must be a non-empty array');
+    }
+
+    const categories = analysis.categories
+      .filter((category): category is string => typeof category === 'string')
+      .map((category) => category.trim())
+      .filter(Boolean);
+
+    if (categories.length === 0) {
+      throw new Error('Invalid AI response: categories must contain strings');
+    }
 
     return {
-      analysis: analysis.analysis || analysis.tldr || 'No summary available',
-      categories: Array.isArray(analysis.categories) ? analysis.categories : [],
+      coreInsight: analysis.coreInsight.trim(),
+      evidence: analysis.evidence.trim(),
+      categories,
     };
   } catch (error: unknown) {
     console.error('Groq analysis error:', error);
