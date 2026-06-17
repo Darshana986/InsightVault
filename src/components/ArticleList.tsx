@@ -10,15 +10,24 @@ interface ArticleListProps {
 
 export function ArticleList({ initialArticles }: ArticleListProps) {
   const [articles, setArticles] = useState<Article[]>(initialArticles);
-  const [isPolling, setIsPolling] = useState(true);
 
-  // Fetch articles from parent endpoint
+  // Fetch articles from parent endpoint and kick processing for one pending item.
   const fetchArticles = useCallback(async () => {
     try {
       const res = await fetch('/api/articles');
       if (res.ok) {
         const data = await res.json();
-        setArticles(data.articles || []);
+        const nextArticles: Article[] = data.articles || [];
+        setArticles(nextArticles);
+
+        const pendingArticle = nextArticles.find(
+          (a) => !a.title && !a.ai_error && !a.processing_started_at
+        );
+
+        if (pendingArticle) {
+          // Trigger server-side processing for one article to avoid card-level fan-out.
+          void fetch(`/api/articles/${pendingArticle.id}`, { cache: 'no-store' });
+        }
       }
     } catch (e) {
       console.error('Parent poll error:', e);
