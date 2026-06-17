@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Article } from '@/lib/database.types';
+import { ArticleListItem } from '@/lib/database.types';
 import { ArticleCard } from './ArticleCard';
 
 interface ArticleListProps {
-  initialArticles: Article[];
+  initialArticles: ArticleListItem[];
 }
 
 export function ArticleList({ initialArticles }: ArticleListProps) {
-  const [articles, setArticles] = useState<Article[]>(initialArticles);
+  const [articles, setArticles] = useState<ArticleListItem[]>(initialArticles);
 
   // Fetch articles from parent endpoint and kick processing for one pending item.
   const fetchArticles = useCallback(async () => {
@@ -17,7 +17,7 @@ export function ArticleList({ initialArticles }: ArticleListProps) {
       const res = await fetch('/api/articles');
       if (res.ok) {
         const data = await res.json();
-        const nextArticles: Article[] = data.articles || [];
+        const nextArticles: ArticleListItem[] = data.articles || [];
         setArticles(nextArticles);
 
         const pendingArticle = nextArticles.find(

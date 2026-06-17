@@ -19,6 +19,20 @@ export interface Article {
   updated_at: string;
 }
 
+export type ArticleListItem = Pick<
+  Article,
+  | 'id'
+  | 'url'
+  | 'title'
+  | 'analysis'
+  | 'categories'
+  | 'reading_time'
+  | 'status'
+  | 'created_at'
+  | 'ai_error'
+  | 'processing_started_at'
+>;
+
 // For inserting new articles (id, created_at, updated_at are auto-generated)
 export type NewArticle = Omit<Article, 'id' | 'created_at' | 'updated_at'>;
 

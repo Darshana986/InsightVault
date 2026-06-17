@@ -9,7 +9,7 @@ export default async function Home() {
   // Fetch articles from database (Server Component - runs on server)
   const { data: articles, error } = await supabase
     .from('articles')
-    .select('*')
+    .select('id, url, title, analysis, categories, reading_time, status, created_at, ai_error, processing_started_at')
     .order('created_at', { ascending: false });
 
   return (

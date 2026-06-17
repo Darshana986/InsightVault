@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Article } from '@/lib/database.types';
+import { ArticleListItem } from '@/lib/database.types';
 
 interface ArticleCardProps {
-  article: Article;
+  article: ArticleListItem;
   onDeleted: (articleId: string) => void;
   onRetry: () => void;
 }
