@@ -1,61 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Article } from '@/lib/database.types';
 
 interface ArticleCardProps {
   article: Article;
+  onDeleted: (articleId: string) => void;
+  onRetry: () => void;
 }
 
-export function ArticleCard({ article }: ArticleCardProps) {
+export function ArticleCard({ article, onDeleted, onRetry }: ArticleCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleted, setIsDeleted] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [localArticle, setLocalArticle] = useState(article);
-  const router = useRouter();
 
-  // Poll for updates when title or analysis is missing
-  useEffect(() => {
-    // Don't poll if deleted
-    if (isDeleted) return;
-    
-    // Stop polling if we have everything
-    const hasTitle = !!localArticle.title;
-    const hasAnalysis = !!localArticle.analysis;
-    const hasError = !!localArticle.ai_error;
-    
-    if (hasTitle && (hasAnalysis || hasError)) return;
-    
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/articles/${localArticle.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.article) {
-            setLocalArticle(data.article);
-            // Stop if we have title AND (analysis OR error)
-            if (data.article.title && (data.article.analysis || data.article.ai_error)) {
-              clearInterval(pollInterval);
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Poll error:', e);
-      }
-    }, 2000); // Poll every 2 seconds
-    
-    return () => clearInterval(pollInterval);
-  }, [localArticle.id, localArticle.title, localArticle.analysis, localArticle.ai_error, isDeleted]);
-
-  // Render nothing if deleted (using fragment to maintain hook consistency)
-  if (isDeleted) {
-    return null;
-  }
 
   // Format the date
-  const savedDate = new Date(localArticle.created_at).toLocaleDateString('en-US', {
+  const savedDate = new Date(article.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
   });
@@ -70,13 +31,12 @@ export function ArticleCard({ article }: ArticleCardProps) {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/articles/${localArticle.id}`, {
+      const response = await fetch(`/api/articles/${article.id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        setIsDeleted(true); // Hide immediately
-        router.refresh(); // Also refresh for consistency
+        onDeleted(article.id); // Notify parent to remove this card
       } else {
         console.error('Failed to delete article');
         setIsDeleting(false);
@@ -90,27 +50,24 @@ export function ArticleCard({ article }: ArticleCardProps) {
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
-      const response = await fetch(`/api/articles/${localArticle.id}`, {
+      const response = await fetch(`/api/articles/${article.id}`, {
         method: 'PATCH',
       });
 
-      const data = await response.json();
-      
-      if (response.ok && data.article) {
-        setLocalArticle(data.article);
+      if (response.ok) {
+        // Notify parent to refresh articles
+        onRetry();
       } else {
-        // Update local state with new error
-        setLocalArticle(prev => ({ ...prev, ai_error: data.error || 'Retry failed' }));
+        console.error('Retry failed');
       }
     } catch (error) {
       console.error('Retry error:', error);
-      setLocalArticle(prev => ({ ...prev, ai_error: 'Network error. Please try again.' }));
     } finally {
       setIsRetrying(false);
     }
   };
 
-  const analysisText = localArticle.analysis;
+  const analysisText = article.analysis;
   // Keep most of the analysis visible by default; collapse only very long outputs.
   const analysisNeedsTruncation = analysisText && analysisText.length > 1200;
 
@@ -120,9 +77,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
                     ${isDeleting ? 'opacity-50' : ''}`}>
       {/* Header: Title + Delete Button */}
       <div className="flex items-start justify-between gap-2">
-        {localArticle.title ? (
+        {article.title ? (
           <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 flex-1">
-            {localArticle.title}
+            {article.title}
           </h3>
         ) : (
           <div className="flex-1 space-y-1 animate-pulse">
@@ -147,9 +104,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
       </div>
 
       {/* AI Error with Retry */}
-      {localArticle.ai_error && (
+      {article.ai_error && (
         <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-md flex items-center justify-between gap-2">
-          <span className="text-xs text-red-600 dark:text-red-400">{localArticle.ai_error}</span>
+          <span className="text-xs text-red-600 dark:text-red-400">{article.ai_error}</span>
           <button
             onClick={handleRetry}
             disabled={isRetrying}
@@ -171,7 +128,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
       )}
 
       {/* Shimmering Placeholder when AI is processing */}
-      {!analysisText && !localArticle.ai_error && (
+      {!analysisText && !article.ai_error && (
         <div className="mt-2 space-y-2 animate-pulse">
           <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded w-full"></div>
           <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded w-4/5"></div>
@@ -180,7 +137,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
       )}
 
       {/* Gist */}
-      {analysisText && !localArticle.ai_error && (
+      {analysisText && !article.ai_error && (
         <div className="mt-3">
           <div 
             className="text-sm text-zinc-700 dark:text-zinc-300 space-y-2 [&_strong]:font-semibold [&_strong]:text-zinc-900 [&_strong]:dark:text-zinc-100 [&_p]:leading-relaxed"
@@ -206,9 +163,9 @@ export function ArticleCard({ article }: ArticleCardProps) {
       {/* Takeaways removed - gist replaces this */}
 
       {/* Categories */}
-      {localArticle.categories && localArticle.categories.length > 0 && (
+      {article.categories && article.categories.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1">
-          {localArticle.categories.slice(0, 3).map((category) => (
+          {article.categories.slice(0, 3).map((category) => (
             <span
               key={category}
               className="px-2 py-0.5 text-xs rounded-full bg-zinc-100 dark:bg-zinc-800 
@@ -223,20 +180,20 @@ export function ArticleCard({ article }: ArticleCardProps) {
       {/* Footer: Reading time, date, status */}
       <div className="mt-3 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-500">
         <div className="flex items-center gap-2">
-          {localArticle.reading_time && (
-            <span>{localArticle.reading_time} min read</span>
+          {article.reading_time && (
+            <span>{article.reading_time} min read</span>
           )}
           <span>·</span>
           <span>Saved {savedDate}</span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[localArticle.status]}`}>
-          {localArticle.status}
+        <span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[article.status]}`}>
+          {article.status}
         </span>
       </div>
 
       {/* Link to original */}
       <a
-        href={localArticle.url}
+        href={article.url}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-3 inline-block text-sm text-blue-600 dark:text-blue-400 hover:underline"

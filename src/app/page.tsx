@@ -43,7 +43,7 @@ export default async function Home() {
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
             Your Library ({articles?.length ?? 0} articles)
           </h2>
-          <ArticleList articles={articles ?? []} />
+          <ArticleList initialArticles={articles ?? []} />
         </div>
       </main>
     </div>

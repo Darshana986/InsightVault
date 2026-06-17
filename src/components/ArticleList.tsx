@@ -1,11 +1,52 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
 import { Article } from '@/lib/database.types';
 import { ArticleCard } from './ArticleCard';
 
 interface ArticleListProps {
-  articles: Article[];
+  initialArticles: Article[];
 }
 
-export function ArticleList({ articles }: ArticleListProps) {
+export function ArticleList({ initialArticles }: ArticleListProps) {
+  const [articles, setArticles] = useState<Article[]>(initialArticles);
+  const [isPolling, setIsPolling] = useState(true);
+
+  // Fetch articles from parent endpoint
+  const fetchArticles = useCallback(async () => {
+    try {
+      const res = await fetch('/api/articles');
+      if (res.ok) {
+        const data = await res.json();
+        setArticles(data.articles || []);
+      }
+    } catch (e) {
+      console.error('Parent poll error:', e);
+    }
+  }, []);
+
+  // Poll every 5 seconds for updates
+  useEffect(() => {
+    // Initial fetch
+    fetchArticles();
+
+    // Set up polling interval
+    const pollInterval = setInterval(fetchArticles, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [fetchArticles]);
+
+  // Handle when articles are deleted (optimistic update)
+  const handleArticleDeleted = useCallback((articleId: string) => {
+    setArticles((prev) => prev.filter((a) => a.id !== articleId));
+  }, []);
+
+  // Handle when retry is clicked (refresh articles)
+  const handleRetry = useCallback(() => {
+    // Refresh immediately after retry
+    setTimeout(fetchArticles, 500);
+  }, [fetchArticles]);
+
   if (articles.length === 0) {
     return (
       <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
@@ -18,7 +59,12 @@ export function ArticleList({ articles }: ArticleListProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {articles.map((article) => (
-        <ArticleCard key={article.id} article={article} />
+        <ArticleCard
+          key={article.id}
+          article={article}
+          onDeleted={handleArticleDeleted}
+          onRetry={handleRetry}
+        />
       ))}
     </div>
   );
