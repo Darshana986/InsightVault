@@ -30,7 +30,7 @@ if (!GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 const model = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash'
+  model: 'gemini-3.1-flash-lite'
 });
 
 // Helper to delay execution
@@ -71,16 +71,6 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
           .replace(/```json\n?/g, '')
           .replace(/```\n?/g, '')
           .trim();
-        
-        // Fix control characters that break JSON parsing
-        // Replace actual newlines in string values with \\n
-        cleanJson = cleanJson
-          .replace(/[\x00-\x1F\x7F]/g, (char) => {
-            if (char === '\n') return '\\n';
-            if (char === '\r') return '\\r';
-            if (char === '\t') return '\\t';
-            return ''; // Remove other control characters
-          });
         
         const analysis = JSON.parse(cleanJson) as {
           coreInsight?: unknown;
