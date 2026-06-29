@@ -7,13 +7,6 @@ import { analyzeWithGroq } from '@/lib/groq';
 // Lock expiration time: 5 minutes
 const LOCK_EXPIRY_MINUTES = 5;
 
-function toStoredAnalysis(coreInsight: string, evidence: string): string {
-  if (!evidence) {
-    return coreInsight;
-  }
-  return `${coreInsight}\n\nEvidence: ${evidence}`;
-}
-
 // GET /api/articles/[id] - Get a single article (triggers processing if needed)
 export async function GET(
   request: NextRequest,
@@ -109,12 +102,12 @@ export async function GET(
             await supabase
               .from('articles')
               .update({
-                analysis: toStoredAnalysis(analysis.coreInsight, analysis.evidence),
+                analysis: analysis.analysis,
                 categories: analysis.categories,
               })
               .eq('id', id);
             
-            article.analysis = toStoredAnalysis(analysis.coreInsight, analysis.evidence);
+            article.analysis = analysis.analysis;
             article.categories = analysis.categories;
             console.log('AI analysis done for:', id);
           } catch (aiError) {
@@ -238,7 +231,7 @@ export async function PATCH(
       const { data: updated, error: updateError } = await supabase
         .from('articles')
         .update({
-          analysis: toStoredAnalysis(analysis.coreInsight, analysis.evidence),
+          analysis: analysis.analysis,
           categories: analysis.categories,
           ai_error: null,
         })

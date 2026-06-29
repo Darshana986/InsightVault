@@ -4,10 +4,19 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { buildInsightPrompt } from './insightPrompt';
 
+export type ArticleType = 'argument' | 'explainer' | 'news' | 'case-study' | 'low-signal';
+
+const validArticleTypes: readonly ArticleType[] = ['argument', 'explainer', 'news', 'case-study', 'low-signal'];
+
+function isArticleType(value: unknown): value is ArticleType {
+  return typeof value === 'string' && validArticleTypes.includes(value as ArticleType);
+}
+
 export interface ArticleAnalysis {
-  coreInsight: string;
-  evidence: string;
+  analysis: string;
+  articleType: ArticleType;
   categories: string[];
+  sourceBasis: string;
 }
 
 // Custom error class for Gemini errors
@@ -67,22 +76,26 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
 
         // Parse the JSON response
         // Clean up the response (remove any markdown code blocks if present)
-        let cleanJson = textResponse
+        const cleanJson = textResponse
           .replace(/```json\n?/g, '')
           .replace(/```\n?/g, '')
           .trim();
         
         const analysis = JSON.parse(cleanJson) as {
-          coreInsight?: unknown;
-          evidence?: unknown;
+          analysis?: unknown;
+          articleType?: unknown;
           categories?: unknown;
+          sourceBasis?: unknown;
         };
 
-        if (typeof analysis.coreInsight !== 'string' || !analysis.coreInsight.trim()) {
-          throw new Error('Invalid AI response: coreInsight is required');
+        if (typeof analysis.analysis !== 'string' || !analysis.analysis.trim()) {
+          throw new Error('Invalid AI response: analysis is required');
         }
-        if (typeof analysis.evidence !== 'string' || !analysis.evidence.trim()) {
-          throw new Error('Invalid AI response: evidence is required');
+        if (!isArticleType(analysis.articleType)) {
+          throw new Error('Invalid AI response: articleType is required');
+        }
+        if (typeof analysis.sourceBasis !== 'string' || !analysis.sourceBasis.trim()) {
+          throw new Error('Invalid AI response: sourceBasis is required');
         }
         if (!Array.isArray(analysis.categories) || analysis.categories.length === 0) {
           throw new Error('Invalid AI response: categories must be a non-empty array');
@@ -98,9 +111,10 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
         }
 
         return {
-          coreInsight: analysis.coreInsight.trim(),
-          evidence: analysis.evidence.trim(),
+          analysis: analysis.analysis.trim(),
+          articleType: analysis.articleType,
           categories,
+          sourceBasis: analysis.sourceBasis.trim(),
         };
       } catch (err: unknown) {
         lastError = err;

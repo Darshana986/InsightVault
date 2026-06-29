@@ -1,30 +1,13 @@
 export function buildInsightPrompt(title: string, truncatedContent: string): string {
-  return `You are an insight extractor.
+   return `You are writing insight cards for a personal reading app.
 
-Most articles contain a mix of:
+The user may never open the article. Your job is to give them the one idea worth keeping, with enough context to understand it.
 
-* Core ideas
-* Supporting evidence
-* Anecdotes
-* Examples
-* Repetition
-* Marketing
-* Calls to action
+Your output should feel like something that makes a curious builder stop scrolling: clear, specific, useful, and alive.
 
-Your job is NOT to summarize the article.
+It must not feel like a summary, a book report, an analyst note, or a list of evidence.
 
-Your job is to identify the single most valuable thing a reader would learn from reading it.
-
-Ignore:
-
-* Advertisements
-* Event promotions
-* Newsletter promotions
-* Referral links
-* Calls to subscribe
-* Calls to register
-* Self promotion
-* Sponsored content
+Ignore advertisements, event promotions, newsletter promotions, referral links, calls to subscribe, calls to register, self promotion, and sponsored content.
 
 ARTICLE TITLE:
 ${title}
@@ -32,122 +15,78 @@ ${title}
 ARTICLE CONTENT:
 ${truncatedContent}
 
-STEP 1: Determine the article type.
+STEP 1: Classify the article as exactly one articleType:
 
-Choose ONE:
+* argument: a thesis, opinion, prediction, strategic perspective, or interpretation
+* explainer: a concept, system, mechanism, process, or mental model
+* news: a new event, launch, discovery, announcement, or change
+* case-study: a person, company, product, incident, or story that reveals a lesson
+* low-signal: mostly promotional, repetitive, generic, thin, or not meaningfully insightful
 
-1. Insight / Opinion
+STEP 2: Write the reader-facing analysis card.
 
-   * Argues for a belief, strategy, prediction, perspective, or interpretation.
+For argument:
+Explain the main shift the article is arguing for. Include the old assumption, what changed, and what that changes for real people, companies, or systems.
 
-2. Educational / Explainer
+For explainer:
+Teach the concept plainly. Include the mechanism that makes it work and the practical way it changes how the reader should think.
 
-   * Teaches a concept, framework, process, mechanism, or mental model.
+For news:
+State what changed, who is affected, and why this matters now. Do not predict consequences unless the article explicitly supports them.
 
-3. News / Reporting
+For case-study:
+State the specific thing that happened, then the broader lesson the example demonstrates and who should care.
 
-   * Primarily communicates new events, developments, announcements, or discoveries.
+For low-signal:
+Do not manufacture excitement. Extract the most useful concrete point, or honestly indicate that the article offers limited reusable insight.
 
-STEP 2: Extract the highest-value takeaway.
+STYLE RULES:
 
-For Insight / Opinion articles:
+* Write one compact paragraph.
+* Use 2 or 3 sentences.
+* Use 55 to 85 words unless the article is low-signal.
+* Prefer plain language over compressed language.
+* The best shape is often: what is changing, the mechanism causing it, and the key shift the reader should remember.
+* Make it specific enough that it could not describe many articles with the same topic.
+* Make it more useful than the headline.
+* Use vivid wording only when it increases clarity.
+* Do not use clickbait, hype, unsupported stakes, or invented drama.
+* Do not use dense analyst phrases such as "fundamentally decoupled", "high-margin world", "AI-hungry", or "exporting a scarcity crisis".
+* Do not introduce information that is not explicitly taught, argued, demonstrated, or reported in the article.
+* Do not write "the article says", "the article explains", "the author argues", or "the article discusses".
 
-* Identify the central thesis.
-* Explain why it matters.
-* Explain the implication.
+BAD ANALYSIS:
+The memory market has fundamentally decoupled into two distinct economies: a locked-in, high-margin world for AI-hungry hyperscalers and a volatile, supply-strained market for everyone else.
 
-For Educational / Explainer articles:
+GOOD ANALYSIS:
+AI is changing the memory industry from a predictable boom-bust commodity cycle into a two-tier market. Hyperscalers are locking in HBM supply through long-term contracts, protecting AI infrastructure demand while companies outside that ecosystem absorb the shortage. The key shift: AI demand is not just increasing memory consumption, it is changing who gets supply certainty and who carries the risk.
 
-* Identify the concept being taught.
-* Explain it simply.
-* Explain why understanding it matters.
+REJECT GENERIC ANALYSIS SUCH AS:
 
-For News / Reporting articles:
+* AI is transforming industries.
+* Technology is changing the world.
+* Automation improves efficiency.
+* Startups need customers.
+* Data is important.
 
-* Identify what happened.
-* Explain why it matters.
-* Explain the likely consequence.
+QUALITY CHECK BEFORE OUTPUT:
 
-IMPORTANT:
+* Would this make a curious builder stop scrolling?
+* Could the user understand the useful idea without opening the article?
+* Is every claim directly supported by the article?
+* Is this an idea, not a topic?
+* If the article is boring, did you avoid pretending otherwise?
 
-Do not extract the topic.
-
-Extract the lesson.
-
-Bad:
-"AI improves productivity."
-
-Good:
-"Companies gain the most value from AI when it reduces onboarding and operational friction rather than simply automating individual tasks."
-
-Bad:
-"Ford and GM are using batteries for data centers."
-
-Good:
-"Automakers are repurposing underutilized battery infrastructure to participate in the growing AI data-center market."
-
-If multiple ideas are present:
-
-* Choose the idea that best explains the others.
-* Prefer root causes over symptoms.
-* Prefer mental models over observations.
-* Prefer strategic shifts over isolated examples.
-* Prefer enduring lessons over temporary details.
-
-QUALITY CHECK:
-
-Before producing the output, ask:
-
-"Could someone understand the article's most valuable lesson from coreInsight alone?"
-
-If not, rewrite it.
-
-The coreInsight must be:
-
-* Specific
-* Memorable
-* Unique to this article
-* More valuable than the headline
-* More valuable than the topic
-* Directly supported by the article
-
-Reject generic insights such as:
-
-* AI is transforming industries
-* Technology is changing the world
-* Automation improves efficiency
-* Startups need customers
-* Data is important
-
-Do not introduce information that is not explicitly taught, argued, demonstrated, or reported in the article.
-
-Respond in EXACT JSON format:
+Return EXACT JSON format:
 
 {
-"coreInsight": "One clear sentence describing the most important thing the reader should remember",
-"evidence": "At most two facts, examples, or observations that most directly support the coreInsight",
-"categories": ["Category1"]
+"analysis": "One reader-facing insight card, written as one compact paragraph",
+"articleType": "argument",
+"categories": ["Category1"],
+"sourceBasis": "Private grounding note naming the article facts, examples, or claims that support the analysis"
 }
 
-RULES:
-
-* Extract the idea, not the article.
-* Do not summarize section by section.
-* Do not describe what was written.
-* Do not write:
-
-  * 'The article says'
-  * 'The article explains'
-  * 'The author argues'
-  * 'The article discusses'
-* Remove repetition.
-* Be concise.
-* Use only information present in the article.
-
-Maximum lengths:
-
-* coreInsight: 30 words
-* evidence: 60 words
+Return ONLY valid JSON.
 
 CATEGORIES:
 
@@ -164,8 +103,6 @@ CATEGORIES:
 * Science
 * Culture
 * Other
-
-Return ONLY valid JSON.
 
 `;
 }

@@ -2,10 +2,15 @@
 // Using Llama 3.1 8B which has generous free tier (14.4K requests/day)
 
 import Groq from 'groq-sdk';
-import { ArticleAnalysis } from './gemini';
+import { ArticleAnalysis, ArticleType } from './gemini';
 import { buildInsightPrompt } from './insightPrompt';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const validArticleTypes: readonly ArticleType[] = ['argument', 'explainer', 'news', 'case-study', 'low-signal'];
+
+function isArticleType(value: unknown): value is ArticleType {
+  return typeof value === 'string' && validArticleTypes.includes(value as ArticleType);
+}
 
 /**
  * Analyze article content using Groq (Llama 3.1 8B)
@@ -54,16 +59,20 @@ export async function analyzeWithGroq(title: string, content: string): Promise<A
 
     // Parse directly - JSON.parse handles newlines in valid JSON
     const analysis = JSON.parse(cleanJson) as {
-      coreInsight?: unknown;
-      evidence?: unknown;
+      analysis?: unknown;
+      articleType?: unknown;
       categories?: unknown;
+      sourceBasis?: unknown;
     };
 
-    if (typeof analysis.coreInsight !== 'string' || !analysis.coreInsight.trim()) {
-      throw new Error('Invalid AI response: coreInsight is required');
+    if (typeof analysis.analysis !== 'string' || !analysis.analysis.trim()) {
+      throw new Error('Invalid AI response: analysis is required');
     }
-    if (typeof analysis.evidence !== 'string' || !analysis.evidence.trim()) {
-      throw new Error('Invalid AI response: evidence is required');
+    if (!isArticleType(analysis.articleType)) {
+      throw new Error('Invalid AI response: articleType is required');
+    }
+    if (typeof analysis.sourceBasis !== 'string' || !analysis.sourceBasis.trim()) {
+      throw new Error('Invalid AI response: sourceBasis is required');
     }
     if (!Array.isArray(analysis.categories) || analysis.categories.length === 0) {
       throw new Error('Invalid AI response: categories must be a non-empty array');
@@ -79,9 +88,10 @@ export async function analyzeWithGroq(title: string, content: string): Promise<A
     }
 
     return {
-      coreInsight: analysis.coreInsight.trim(),
-      evidence: analysis.evidence.trim(),
+      analysis: analysis.analysis.trim(),
+      articleType: analysis.articleType,
       categories,
+      sourceBasis: analysis.sourceBasis.trim(),
     };
   } catch (error: unknown) {
     console.error('Groq analysis error:', error);
