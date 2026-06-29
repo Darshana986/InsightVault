@@ -5,16 +5,23 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { buildInsightPrompt } from './insightPrompt';
 
 export type ArticleType = 'argument' | 'explainer' | 'news' | 'case-study' | 'low-signal';
+export type InsightDepth = 'compact' | 'standard' | 'deep' | 'low-signal';
 
 const validArticleTypes: readonly ArticleType[] = ['argument', 'explainer', 'news', 'case-study', 'low-signal'];
+const validInsightDepths: readonly InsightDepth[] = ['compact', 'standard', 'deep', 'low-signal'];
 
 function isArticleType(value: unknown): value is ArticleType {
   return typeof value === 'string' && validArticleTypes.includes(value as ArticleType);
 }
 
+function isInsightDepth(value: unknown): value is InsightDepth {
+  return typeof value === 'string' && validInsightDepths.includes(value as InsightDepth);
+}
+
 export interface ArticleAnalysis {
   analysis: string;
   articleType: ArticleType;
+  insightDepth: InsightDepth;
   categories: string[];
   sourceBasis: string;
 }
@@ -84,6 +91,7 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
         const analysis = JSON.parse(cleanJson) as {
           analysis?: unknown;
           articleType?: unknown;
+          insightDepth?: unknown;
           categories?: unknown;
           sourceBasis?: unknown;
         };
@@ -93,6 +101,9 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
         }
         if (!isArticleType(analysis.articleType)) {
           throw new Error('Invalid AI response: articleType is required');
+        }
+        if (!isInsightDepth(analysis.insightDepth)) {
+          throw new Error('Invalid AI response: insightDepth is required');
         }
         if (typeof analysis.sourceBasis !== 'string' || !analysis.sourceBasis.trim()) {
           throw new Error('Invalid AI response: sourceBasis is required');
@@ -113,6 +124,7 @@ export async function analyzeArticle(title: string, content: string): Promise<Ar
         return {
           analysis: analysis.analysis.trim(),
           articleType: analysis.articleType,
+          insightDepth: analysis.insightDepth,
           categories,
           sourceBasis: analysis.sourceBasis.trim(),
         };

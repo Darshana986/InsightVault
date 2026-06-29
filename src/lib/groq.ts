@@ -2,14 +2,19 @@
 // Using Llama 3.1 8B which has generous free tier (14.4K requests/day)
 
 import Groq from 'groq-sdk';
-import { ArticleAnalysis, ArticleType } from './gemini';
+import { ArticleAnalysis, ArticleType, InsightDepth } from './gemini';
 import { buildInsightPrompt } from './insightPrompt';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const validArticleTypes: readonly ArticleType[] = ['argument', 'explainer', 'news', 'case-study', 'low-signal'];
+const validInsightDepths: readonly InsightDepth[] = ['compact', 'standard', 'deep', 'low-signal'];
 
 function isArticleType(value: unknown): value is ArticleType {
   return typeof value === 'string' && validArticleTypes.includes(value as ArticleType);
+}
+
+function isInsightDepth(value: unknown): value is InsightDepth {
+  return typeof value === 'string' && validInsightDepths.includes(value as InsightDepth);
 }
 
 /**
@@ -33,7 +38,7 @@ export async function analyzeWithGroq(title: string, content: string): Promise<A
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.1-8b-instant',
       temperature: 0.3,
-      max_tokens: 512, // JSON output is tiny; prevents hitting token budget mid-generation
+      max_tokens: 768, // Allows deeper cards without cutting off valid JSON
       response_format: { type: 'json_object' }, // Force JSON output
     });
 
@@ -61,6 +66,7 @@ export async function analyzeWithGroq(title: string, content: string): Promise<A
     const analysis = JSON.parse(cleanJson) as {
       analysis?: unknown;
       articleType?: unknown;
+      insightDepth?: unknown;
       categories?: unknown;
       sourceBasis?: unknown;
     };
@@ -70,6 +76,9 @@ export async function analyzeWithGroq(title: string, content: string): Promise<A
     }
     if (!isArticleType(analysis.articleType)) {
       throw new Error('Invalid AI response: articleType is required');
+    }
+    if (!isInsightDepth(analysis.insightDepth)) {
+      throw new Error('Invalid AI response: insightDepth is required');
     }
     if (typeof analysis.sourceBasis !== 'string' || !analysis.sourceBasis.trim()) {
       throw new Error('Invalid AI response: sourceBasis is required');
@@ -90,6 +99,7 @@ export async function analyzeWithGroq(title: string, content: string): Promise<A
     return {
       analysis: analysis.analysis.trim(),
       articleType: analysis.articleType,
+      insightDepth: analysis.insightDepth,
       categories,
       sourceBasis: analysis.sourceBasis.trim(),
     };

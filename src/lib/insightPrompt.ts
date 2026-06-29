@@ -23,10 +23,32 @@ STEP 1: Classify the article as exactly one articleType:
 * case-study: a person, company, product, incident, or story that reveals a lesson
 * low-signal: mostly promotional, repetitive, generic, thin, or not meaningfully insightful
 
-STEP 2: Write the reader-facing analysis card.
+STEP 2: Choose exactly one insightDepth:
+
+* compact: 55-75 words
+   Use when the article has one useful idea and little necessary context.
+
+* standard: 80-115 words
+   Use when the article has one main idea plus important context, mechanism, or stakes.
+
+* deep: 120-170 words
+   Use when the useful idea depends on multiple connected parts, such as a market structure change, framework, tradeoff, technical mechanism, long case study, or layered argument.
+
+* low-signal: 45-65 words
+   Use when the article is thin, repetitive, promotional, generic, or mostly obvious.
+
+DEPTH RULES:
+
+* Choose the shortest depth that preserves the useful idea.
+* Do not choose deep just because the article is long.
+* Do not choose compact if it forces vague or compressed language.
+* Never exceed 170 words.
+* Never write fewer than 45 words.
+
+STEP 3: Write the reader-facing analysis card.
 
 For argument:
-Explain the main shift the article is arguing for. Include the old assumption, what changed, and what that changes for real people, companies, or systems.
+Explain the main shift the article is arguing for. Include the old assumption, what changed, the concrete mechanism, and what that changes for real people, companies, or systems.
 
 For explainer:
 Teach the concept plainly. Include the mechanism that makes it work and the practical way it changes how the reader should think.
@@ -43,23 +65,44 @@ Do not manufacture excitement. Extract the most useful concrete point, or honest
 STYLE RULES:
 
 * Write one compact paragraph.
-* Use 2 or 3 sentences.
-* Use 55 to 85 words unless the article is low-signal.
-* Prefer plain language over compressed language.
+* Follow the word range for the selected insightDepth.
+* Use 1 or 2 sentences for compact and low-signal.
+* Use 2 or 3 sentences for standard.
+* Use 3 to 5 sentences for deep.
+* Prefer simple, everyday words over compressed or impressive-sounding language.
+* Write like a smart friend explaining the idea, not like a consultant, academic, or market analyst.
+* If a simpler word works, use it.
 * The best shape is often: what is changing, the mechanism causing it, and the key shift the reader should remember.
+* Stay at the concrete mechanism level, not the market-abstraction level.
+* Use at least one concrete source detail when it carries the insight: a number, named buyer group, contract type, price change, product type, physical constraint, or company example.
+* Do not replace concrete source details with vague abstractions.
+* Name who benefits and who absorbs the cost when the article makes that clear.
 * Make it specific enough that it could not describe many articles with the same topic.
 * Make it more useful than the headline.
 * Use vivid wording only when it increases clarity.
 * Do not use clickbait, hype, unsupported stakes, or invented drama.
-* Do not use dense analyst phrases such as "fundamentally decoupled", "high-margin world", "AI-hungry", or "exporting a scarcity crisis".
+* Do not use dense or showy phrases such as "fundamentally decoupled", "high-margin world", "AI-hungry", "paradigm shift", "inflection point", "structural transformation", "unprecedented disruption", or "exporting a scarcity crisis".
+* Avoid fancy verbs like "leverage", "unlock", "catalyze", "redefine", "reshape", and "optimize" when simpler verbs like "use", "change", "create", "make", or "improve" would work.
+* Avoid vague abstraction words like "bifurcating", "ecosystem", "strategic asset", "market dynamics", "demand environment", and "structural shift" unless no simpler wording is accurate.
 * Do not introduce information that is not explicitly taught, argued, demonstrated, or reported in the article.
 * Do not write "the article says", "the article explains", "the author argues", or "the article discusses".
 
 BAD ANALYSIS:
-The memory market has fundamentally decoupled into two distinct economies: a locked-in, high-margin world for AI-hungry hyperscalers and a volatile, supply-strained market for everyone else.
+AI is bifurcating the memory market, ending the era of a single, uniform commodity cycle. Hyperscalers are now using long-term, take-or-pay contracts to guarantee supply, effectively creating a protected tier for AI infrastructure. Because high-bandwidth memory chips are more physically demanding to produce, this surge consumes the very manufacturing capacity once used for general-purpose hardware.
 
 GOOD ANALYSIS:
-AI is changing the memory industry from a predictable boom-bust commodity cycle into a two-tier market. Hyperscalers are locking in HBM supply through long-term contracts, protecting AI infrastructure demand while companies outside that ecosystem absorb the shortage. The key shift: AI demand is not just increasing memory consumption, it is changing who gets supply certainty and who carries the risk.
+AI is not just increasing demand for memory; it is deciding who gets memory first. Cloud companies are locking in HBM with long-term contracts, while those chips use roughly three times the wafer area of ordinary DDR5. The squeeze lands on everyone outside the AI buildout: carmakers, industrial suppliers, and PC builders buying scarcer chips at higher prices.
+
+CONCRETENESS EXAMPLES:
+
+Bad: "physically demanding to produce"
+Good: "uses roughly three times the wafer area of ordinary DDR5"
+
+Bad: "companies outside that ecosystem"
+Good: "carmakers, industrial suppliers, and PC builders"
+
+Bad: "memory is becoming a strategic asset"
+Good: "cloud companies are locking in memory before other buyers can get it"
 
 REJECT GENERIC ANALYSIS SUCH AS:
 
@@ -82,6 +125,7 @@ Return EXACT JSON format:
 {
 "analysis": "One reader-facing insight card, written as one compact paragraph",
 "articleType": "argument",
+"insightDepth": "standard",
 "categories": ["Category1"],
 "sourceBasis": "Private grounding note naming the article facts, examples, or claims that support the analysis"
 }
